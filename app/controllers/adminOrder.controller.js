@@ -36,8 +36,7 @@ exports.list = async (req, res) => {
     };
 
 
-    let orderData = await OrderModel.find(findCriteria, projection, pageParams)
-        .catch(err => {
+    let orderData = await OrderModel.find(findCriteria, projection, pageParams).populate({path:'userId',select:'name'}).catch(err => {
             return {
                 success: 0,
                 message: 'Something went wrong while checking phone',
@@ -82,50 +81,15 @@ exports.list = async (req, res) => {
             }
         }
 
-        var array = [];
-        for (x in orderData){
-          
-            let item = orderData[x];
+        
+        
            
-           
-            let user = await UserModel.findOne({_id:item.userId},{name:1}).catch(err=> {
-                return {
-                    success: 0,
-                    message: 'DB error ',
-                    error: err
-                }}
-            )
-
-           
-
-            if (!user){
-                
-                continue;
-            }
-            else {
-               
-            }
-            let object = {
-                customerName:user.name,
-                id:item._id,
-                orderNumber:item.orderNo,
-                date:item.orderDate,
-                method:item.paymentMethod,
-                status:item.orderStatus,
-                totoal:item.grandTotal
-
-            }
-
-          
-            array.push(object);
-        }
-
         return res.send({
             success: 1,
             pagination,
             message: "Listing orders",
            
-            items: array
+            items: orderData
         })
     }
 
@@ -140,7 +104,7 @@ exports.update = async (req, res) => {
 
 
 
-    if ((!params.id)) {
+    if ((!req.params)) {
         return res.send({
             success: 0,
             msg: "id not  provided"
@@ -163,7 +127,7 @@ exports.update = async (req, res) => {
 
    
     var updated = await OrderModel.updateOne({
-        _id: params.id
+        _id: req.params.id
     },
         update
     ).catch(err => {

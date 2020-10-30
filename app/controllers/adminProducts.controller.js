@@ -91,6 +91,7 @@ exports.create = async (req, res) => {
             category: params.category,
             sellingPrice: params.sellingPrice,
             costPrice: params.costPrice,
+        
             stockAvailable: params.qty,
             description: params.description,
             variantsExist: params.variantsExist || false,

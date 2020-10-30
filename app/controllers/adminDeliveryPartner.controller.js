@@ -386,15 +386,15 @@ exports.update = async (req, res) => {
     let userDataz = req.identity.data;
 
     let params = req.body;
-    if (!params.id) {
+    if (!req.params) {
         return res.send({
             status: 0,
             message: "please specify id"
         })
     }
-    let userId = params.id;
+
     let findCriteria = {};
-    findCriteria._id = userId;
+    findCriteria._id = req.params.id;
     findCriteria.status = 1;
 
     let update = {};
@@ -439,13 +439,13 @@ exports.delete = async (req, res) => {
 
     let params = req.body;
 
-    if (!params.id) {
+    if (!req.params) {
         return res.send({
             status: 0,
             message: "please specify id"
         })
     }
-    let userId = params.id;
+    let userId = req.params.id;
     let findCriteria = {};
     findCriteria._id = userId;
     findCriteria.status = 1;

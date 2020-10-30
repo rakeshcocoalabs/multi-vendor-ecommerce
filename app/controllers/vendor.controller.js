@@ -1,6 +1,7 @@
 var stringify = require('json-stringify-safe');
 var VendorModel = require('../models/vendor.model');
 var AgentModel = require('../models/deliveryAgent.model');
+var CategoryModel = require('../models/categories.model');
 var ProductModel = require('../models/product.model');
 var ReviewModel = require('../models/review.model');
 var bcrypt = require('bcryptjs');
@@ -101,11 +102,11 @@ exports.createProduct = async (req, res) => {
             image: images,
             status: 1,
             //parent:params.parent,
-            expiryDate:params.expiryDate || 0,
-            manufacturingDate:params.manufacturingDate || 0,
-            serialNumber:params.serialNumber || 0,
-            shopOwnerId:userId,
-            productNo:(Date.now()).toString(),
+            expiryDate: params.expiryDate || 0,
+            manufacturingDate: params.manufacturingDate || 0,
+            serialNumber: params.serialNumber || 0,
+            shopOwnerId: userId,
+            productNo: (Date.now()).toString(),
             category: params.category,
             sellingPrice: params.sellingPrice,
             costPrice: params.costPrice,
@@ -136,7 +137,7 @@ exports.addProduct = async (req, res) => {
     let userId = userDataz.id;
     let params = req.body;
 
-    
+
 
 
     if (!params.name) {
@@ -650,12 +651,12 @@ exports.search = async (req, res) => {
     projection.costPrice = 1;
     projection.description = 1;
     projection.avaregeRating = 1;
-    //projection.category = 1;
+    projection.category = 1;
     projection.stockAvailable = 1;
 
 
 
-    let Data = await ProductModel.find(findCriteria, projection, pageParams).populate({path:'category',select:"name"})
+    let Data = await ProductModel.find(findCriteria, projection, pageParams).populate({path:'category',select:'name'})
         .sort(sort)
         .catch(err => {
             return {
@@ -665,7 +666,7 @@ exports.search = async (req, res) => {
             }
         })
 
-     
+
 
 
 
@@ -720,7 +721,7 @@ exports.search = async (req, res) => {
 
         return res.send({
             success: 1,
-            
+
             items: Data,
             pagination,
             message: "search results listed"
@@ -732,6 +733,7 @@ exports.search = async (req, res) => {
 
 exports.updateProduct = async (req, res) => {
 
+
     let userDataz = req.identity.data;
     let userId = userDataz.id;
     let params = req.body;
@@ -739,16 +741,14 @@ exports.updateProduct = async (req, res) => {
 
 
 
-    if ((!params.id)) {
-        return res.send({
-            success: 0,
-            msg: "id not  provided"
-        })
-    }
+    let id = req.params.id;
 
     var update = {};
+    var imageUpdate = {};
 
-   
+    if (params.category) {
+        update.category = params.category;
+    }
     if (params.costPrice) {
         update.costPrice = params.costPrice;
     }
@@ -757,6 +757,18 @@ exports.updateProduct = async (req, res) => {
     }
     if (params.description) {
         update.description = params.description;
+    }
+    if (params.qty) {
+        update.stockAvailable = params.qty;
+    }
+    if (params.serialNumber) {
+        update.serialNumber = params.serialNumber;
+    }
+    if (params.manufacturingDate) {
+        update.manufacturingDate = params.manufacturingDate;
+    }
+    if (params.expiryDate) {
+        update.expiryDate = params.expiryDate;
     }
     if (params.name) {
         var checkProductName = await ProductModel.countDocuments({
@@ -773,29 +785,76 @@ exports.updateProduct = async (req, res) => {
     }
 
 
-    if (update == null) {
+    var files = req.files;
+    var images = [];
+    if (files) {
+        if (files.images && files.images.length > 0) {
+            var len = files.images.length;
+            var i = 0;
+            while (i < len) {
+                images.push(files.images[i].filename);
+                i++;
+            }
+        }
+    }
+
+    if (images.length > 0) {
+        var updatedImages = await ProductModel.updateOne({ _id: id },
+
+            { $push: { image: { $each: images } } }
+        ).catch(err => {
+            return {
+                success: 0,
+                message: "something went wrong while accessing product collection"
+            };
+        });
+    }
+
+    if (params.removeimages) {
+        var updatedImages = await ProductModel.updateOne({ _id: id },
+
+            { $pull: { image: { $in: params.removeimages } } }
+        ).catch(err => {
+            return {
+                success: 0,
+                message: "something went wrong while accessing product collection"
+            };
+        });
+    }
+
+    if(!id){
+        return res.send({
+            success:0,
+            message:"no product mentioned"
+        })
+    }
+
+
+
+    if (!req.files && !params.costPrice && !params.sellingPrice && !params.name && !params.description && !params.category) {
         return res.send({
             success: 0,
             msg: "no update provided"
         })
     }
 
+    
     var updated = await ProductModel.updateOne({
-        _id: params.id
+        _id: id
     },
         update
     ).catch(err => {
         return {
-            success:0,
-            message:"DB error",
-        
+            success: 0,
+            message: "DB error",
+
         };
     });
 
-    if (updated && updated.success && update.success === 0){
+    if (updated && updated.success && update.success === 0) {
         return res.send({
-            success:0,
-            message:"DB error"
+            success: 0,
+            message: "DB error"
         })
     }
 
@@ -891,14 +950,13 @@ exports.reviewlist = async (req, res) => {
 
     let data = await ReviewModel.find(findCriteria, projection, pageParams).sort({
         'tsCreatedAt': -1
+    }).catch(err => {
+        return {
+            success: 0,
+            message: 'Something went wrong while checking phone',
+            error: err
+        }
     })
-        .catch(err => {
-            return {
-                success: 0,
-                message: 'Something went wrong while checking phone',
-                error: err
-            }
-        })
 
     var itemsCount = await ReviewModel.countDocuments(findCriteria);
     totalPages = itemsCount / perPage;
@@ -925,44 +983,44 @@ exports.reviewlist = async (req, res) => {
 }
 
 
-exports.getDashBoard = async (req,res) => {
+exports.getDashBoard = async (req, res) => {
 
     let userId = req.identity.data.id;
 
-    let vendorData = await VendorModel.findOne({status:1,_id:userId}).catch(err=> {
+    let vendorData = await VendorModel.findOne({ status: 1, _id: userId }).catch(err => {
         return {
-            success:0,
-            message:"did not get data from vendor model"
+            success: 0,
+            message: "did not get data from vendor model"
         }
     })
-    if (vendorData && vendorData.success && vendorData.success == 0){
+    if (vendorData && vendorData.success && vendorData.success == 0) {
         return ({
-            success:0,
-            message:"did not get data from vendor model"
+            success: 0,
+            message: "did not get data from vendor model"
         })
     }
-    if (!vendorData){
+    if (!vendorData) {
         return res.send({
-            success:0,
-            message:"return null value"
+            success: 0,
+            message: "return null value"
         })
     }
 
     var sum = 0.0;
     var totalItems = 0;
-    for (x in vendorData.orderHistory){
+    for (x in vendorData.orderHistory) {
 
         let order = vendorData.orderHistory[x]
         let product = order.product
-        
-        if(product){
-            if (product.totalPrice){
+
+        if (product) {
+            if (product.totalPrice) {
                 sum = sum + product.totalPrice;
             }
             else {
                 continue
             }
-            if (product.quantity){
+            if (product.quantity) {
                 totalItems = totalItems + product.quantity;
             }
             else {
@@ -975,25 +1033,25 @@ exports.getDashBoard = async (req,res) => {
 
     }
     var totalProductCount = 0;
-    let productData = await ProductModel.countDocuments({shopOwnerId:userId,status:1}).catch(err=> {
+    let productData = await ProductModel.countDocuments({ shopOwnerId: userId, status: 1 }).catch(err => {
         return {
-            success:0,
-            message:"did not get data from product model"
+            success: 0,
+            message: "did not get data from product model"
         }
     })
-    
-    if (productData){
+
+    if (productData) {
 
         totalProductCount = productData
-        
+
     }
 
     return res.send({
-        message:"dashboard detail",
-        success:0,
+        message: "dashboard detail",
+        success: 0,
         sum,
         totalItems,
-        totalProducts:totalProductCount
+        totalProducts: totalProductCount
     });
 }
 
@@ -1091,9 +1149,7 @@ exports.stockList = async (req, res) => {
 
 
 
-    let Data = await ProductModel.find(findCriteria, projection, pageParams).populate({path:'category',select:"name"})
-        .sort(sort)
-        .catch(err => {
+    let Data = await ProductModel.find(findCriteria, projection, pageParams).populate({ path: 'category', select: "name" }).catch(err => {
             return {
                 success: 0,
                 message: 'Something went wrong while checking phone',
@@ -1101,7 +1157,7 @@ exports.stockList = async (req, res) => {
             }
         })
 
-     
+
 
 
 
@@ -1156,7 +1212,7 @@ exports.stockList = async (req, res) => {
 
         return res.send({
             success: 1,
-            
+
             items: Data,
             pagination,
             message: "search results listed"

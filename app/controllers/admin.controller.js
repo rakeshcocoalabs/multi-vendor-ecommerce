@@ -593,7 +593,7 @@ exports.reviewlist = async (req, res) => {
 
 exports.createVendor = async (req, res) => {
     let params = req.body;
-    
+
 
 
     if (!req.file || !params.email || !params.password || !params.phone || !params.shopname || !params.addressline1 || !params.addressline2 || !params.city || !params.pin) {
@@ -657,7 +657,7 @@ exports.createVendor = async (req, res) => {
             });
             message = "phone is missing";
         }
-        if (!req.file){
+        if (!req.file) {
             errors.push({
                 field: "image",
                 message: "image is missing"
@@ -731,7 +731,7 @@ exports.createVendor = async (req, res) => {
             name: params.name,
             email: params.email,
             mobile: params.mobile,
-            image:req.file.filename,
+            image: req.file.filename,
             shopName: params.shopname,
             address: {
                 line1: params.addressline1,
@@ -763,4 +763,76 @@ exports.createVendor = async (req, res) => {
             message: err.message
         })
     }
+}
+
+
+exports.vendorsList = async (req, res) => {
+
+    //let userDataz = req.identity.data;
+    //let userId = userDataz.id;
+
+    let findCriteria = {};
+
+    findCriteria.status = 1;
+
+    let projection = {};
+
+    // projection.status = 1;
+    // projection._id = 1;
+    // projection.name = 1;
+    // projection.email = 1;
+    // projection.mobile = 1;
+    // projection.tSCreatedAt = 1;
+    // projection.customerId = 1;
+
+
+    // pagination 
+
+    let params = req.query;
+
+    var page = Number(params.page) || 1;
+    page = page > 0 ? page : 1;
+    var perPage = Number(params.perPage) || 30 //feedsConfig.resultsPerPage;
+    perPage = perPage > 0 ? perPage : 30 //feedsConfig.resultsPerPage;
+    var offset = (page - 1) * perPage;
+    var pageParams = {
+        skip: offset,
+        limit: perPage
+    };
+
+
+
+    let vendorData = await VendorModel.find(findCriteria, projection, pageParams).limit(perPage).sort({
+        "tsCreatedAt": -1
+    })
+        .catch(err => {
+            return {
+                success: 0,
+                message: 'Something went wrong while checking phone',
+                error: err
+            }
+        })
+
+
+    var itemsCount = await VendorModel.countDocuments(findCriteria);
+    totalPages = itemsCount / perPage;
+    totalPages = Math.ceil(totalPages);
+    var hasNextPage = page < totalPages;
+    var pagination = {
+        page: page,
+        perPage: perPage,
+        hasNextPage: hasNextPage,
+        totalItems: itemsCount,
+        totalPages: totalPages
+    }
+    if (vendorData) {
+
+        return res.send({
+            success: 1,
+            pagination,
+            items: vendorData,
+            message: "List of Employess"
+        })
+    }
+
 }

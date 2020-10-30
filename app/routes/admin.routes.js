@@ -16,13 +16,13 @@ var vendorImageUpload = multer({ storage: storage });
 module.exports = (app) => { 
     const admin = require('../controllers/admin.controller');
     
-    app.post('/admin/create',auth,admin.create);
+    app.post('/admin/create',admin.create);
     app.post('/admin/login',admin.login);
-    app.post('/admin/add',auth,admin.addUser);
+    app.post('/admin/add',admin.addUser);
    // app.get('/admin/list',admin.addUser);
     app.get('/admin/userlist',auth,admin.list)
     app.get('/admin/reviews',auth,admin.reviewlist)
-    app.get('/admin/dashboard',auth,admin.dashBoardDetails);
+    app.get('/admin/vendors',auth,admin.vendorsList);
 
 
     app.post('/admin/createvendor',vendorImageUpload.single('image'),auth,admin.createVendor);

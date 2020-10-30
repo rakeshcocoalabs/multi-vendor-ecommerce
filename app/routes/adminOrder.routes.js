@@ -12,6 +12,6 @@ module.exports = (app) => {
   
     
     app.get('/adminorder/list', auth, order.list);
-    app.patch('/adminorder/update', auth, order.update);
+    app.patch('/adminorder/:id/update', auth, order.update);
 
 }

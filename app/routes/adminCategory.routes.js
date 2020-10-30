@@ -19,7 +19,7 @@ module.exports = (app) => {
   
     app.post('/admincategory/create', auth,ImageUpload.single('image'), category.create);
     app.get('/admincategory/list', auth, category.list);
-    app.patch('/admincategory/update', auth, category.update);
-    app.delete('/admincategory/delete', auth, category.delete);
+    app.patch('/admincategory/:id/update', auth, ImageUpload.single('image'),category.update);
+    app.delete('/admincategory/:id/delete', auth, category.delete);
 
 }

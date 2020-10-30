@@ -110,22 +110,22 @@ exports.list = async (req, res) => {
     }
     if (categoryData && categoryData.success && categoryData.success === 0) {
         return res.send({
-            success:0,
-            message:"Db error"
+            success: 0,
+            message: "Db error"
         })
 
     }
     else {
-        if (categoryData.length == 0){
-            if (page == 1){
+        if (categoryData.length == 0) {
+            if (page == 1) {
                 return res.send({
-                    success:0,
-                    message:"No items to shoCategoryw"
+                    success: 0,
+                    message: "No items to shoCategoryw"
                 })
-            }else {
+            } else {
                 return res.send({
-                    success:0,
-                    message:"No more items to show"
+                    success: 0,
+                    message: "No more items to show"
                 })
             }
         }
@@ -133,7 +133,7 @@ exports.list = async (req, res) => {
         return res.send({
             success: 1,
             pagination,
-            message:"Listing Categories",
+            message: "Listing Categories",
             categoryImageBase: categoryConfig.imageBase,
             items: categoryData
         })
@@ -144,15 +144,10 @@ exports.list = async (req, res) => {
 
 exports.update = async (req, res) => {
     let userDataz = req.identity.data;
-
+    var files = req.file;
     let params = req.body;
-    if (!params.id) {
-        return res.send({
-            status: 0,
-            message: "please specify id"
-        })
-    }
-    let id = params.id;
+
+    let id = req.params.id;
     let findCriteria = {};
     findCriteria._id = id;
     findCriteria.status = 1;
@@ -160,27 +155,47 @@ exports.update = async (req, res) => {
     let update = {};
 
 
-    if (params.name) {
-        update.name = params.name
+    if (params) {
+        if (params.name) {
+            update.name = params.name
+        }
     }
-    
 
+    if (files) {
+        var fileName = files.filename;
+        update.image = fileName;
+        console.log("break point")
+    }
+
+    if (update == null) {
+        return res.send({
+                success: 0,
+                message: "nothing to update"
+            }
+        )
+    }
+    else {
+        update.tsModifiedAt = Date.now()
+    }
+ 
+    await this.checkExistData(res, findCriteria)
 
     let Data = await CategoryModel.updateOne(findCriteria, update)
         .catch(err => {
             return {
                 success: 0,
-                message: 'Something went wrong while checking phone',
+                message: 'Something went wrong while updating category',
                 error: err
             }
         })
 
+    if (Data && Data.success && Data.success == 0) {
+        return res.send(Data)
+    }
 
     if (Data) {
-
         return res.send({
             success: 1,
-
             message: "category updated successfully"
         })
     }
@@ -188,24 +203,19 @@ exports.update = async (req, res) => {
 exports.delete = async (req, res) => {
     let userDataz = req.identity.data;
 
-    let params = req.body;
-    if (!params.id) {
-        return res.send({
-            status: 0,
-            message: "please specify id"
-        })
-    }
-    let id = params.id;
+
+
+
     let findCriteria = {};
-    findCriteria._id = id;
+    findCriteria._id = req.params.id;
     findCriteria.status = 1;
 
     let update = {
-        status:0
+        status: 0
     };
 
+    this.checkExistData(res, findCriteria)
 
-  
 
     let Data = await CategoryModel.updateOne(findCriteria, update)
         .catch(err => {
@@ -232,4 +242,74 @@ exports.delete = async (req, res) => {
             message: "DB error"
         })
     }
+}
+
+exports.details = async (req, res) => {
+    let userDataz = req.identity.data;
+
+
+
+    let findCriteria = {};
+    findCriteria._id = req.params.id;
+    findCriteria.status = 1;
+
+
+
+    //this.checkExistData(res,findCriteria)
+
+
+    let Data = await CategoryModel.findOne(findCriteria)
+        .catch(err => {
+            return {
+                success: 0,
+                message: 'Something went wrong while fetching category data',
+                error: err
+            }
+        })
+
+    if (Data && Data.success && Data.success == 0) {
+        return res.send(Data)
+    }
+
+
+    if (Data) {
+
+        return res.send({
+            success: 1,
+            Data,
+            categoryImageBase: categoryConfig.imageBase,
+            message: "category details successfully"
+        })
+    }
+    else {
+        return res.send({
+            success: 0,
+
+            message: "did not find category"
+        })
+    }
+}
+
+
+exports.checkExistData = async (res, condition) => {
+
+    let Data = await CategoryModel.findOne(condition).catch(err => {
+
+        return {
+            success: 0,
+            message: "something wenr wrong on identifying category"
+        }
+    })
+
+    if (Data && Data.success && Data.success == 0) {
+        return res.send(Data)
+    }
+    if (!Data) {
+        return res.send({
+            success: 0,
+            message: "no such category exists"
+        })
+    }
+
+
 }

@@ -20,7 +20,7 @@ module.exports = (app) => {
     app.post('/vendor/createproducts',auth, ImageUpload.fields([{name:'images'}]), vendor.createProduct);
     app.get('/vendor/searchproducts', auth, vendor.search);
     app.get('/vendor/dashboard', auth, vendor.getDashBoard);
-    app.patch('/vendor/updateproducts', auth, vendor.updateProduct);
+    app.patch('/vendor/:id/updateproducts', auth, vendor.updateProduct);
     app.delete('/vendor/:id/deleteproducts', auth, vendor.deleteProduct);
     app.get('/vendor/reviews',auth,vendor.reviewlist)
     app.get('/vendor/stocklist',auth,vendor.stockList)
